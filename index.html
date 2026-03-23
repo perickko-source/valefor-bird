@@ -4,23 +4,25 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' https://*.telegram.org https://t.me *;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' https://*.telegram.org https://t.me *;">
     <title>Valefor Bird - 80 y 90 Radio</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
-            user-select: none;
-            position: relative;
-            padding: 10px;
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;  /* ← Cambiado de height a min-height */
+        height: auto;       /* ← Añadido */
+        margin: 0;
+        overflow: auto;     /* ← Cambiado de hidden a auto */
+        user-select: none;
+        position: relative;
         }
         #game-container {
             position: relative;
@@ -346,6 +348,27 @@
     </style>
 </head>
 <body>
+    <script>
+// Detectar si se carga como Inline Game de Telegram
+(function() {
+  const isInlineGame = window.location.href.includes('?game=') || 
+                       (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
+  
+  if (isInlineGame) {
+    // Asegurar que el cuerpo sea scrollable y sin overflow hidden
+    document.body.style.overflow = 'auto';
+    document.body.style.height = 'auto';
+    document.body.style.position = 'relative';
+    
+    // Forzar expansión del WebApp si está disponible
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+      window.Telegram.WebApp.disableVerticalSwipes();
+    }
+  }
+})();
+</script>
     <audio id="radio-audio" preload="none" crossorigin="anonymous">
         <source src="https://stream.zeno.fm/ndhkmuknva0uv" type="audio/mpeg">
     </audio>
