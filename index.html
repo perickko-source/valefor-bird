@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Valefor Bird - 80 y 90 Radio</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            position: relative;
+            padding: 10px;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        #game-canvas {
+            border: 3px solid #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: linear-gradient(180deg, #70C5CE 0%, #70C5CE 100%);
+        }
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            z-index: 50;
+            pointer-events: none;
+        }
+        #lives-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
+            z-index: 50;
+            pointer-events: none;
+        }
+        #checkpoint-indicator {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            color: #4ecdc4;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 15px;
+            border-radius: 15px;
+            z-index: 50;
+            pointer-events: none;
+            display: none;
+        }
+        
+        #encouragement-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8), 0 0 20px #ffdd59;
+            background: linear-gradient(135deg, rgba(255,221,89,0.9), rgba(249,202,36,0.9));
+            padding: 20px 40px;
+            border-radius: 25px;
+            z-index: 70;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s ease-out;
+            text-align: center;
+            animation: none;
+        }
+        #encouragement-message.show {
+            animation: encouragementPop 1.5s ease-out forwards;
+        }
+        @keyframes encouragementPop {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            40% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+        @media (max-width: 350px) {
+            #encouragement-message { font-size: 24px; padding: 15px 30px; }
+        }
+        
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .control-btn {
+            padding: 12px 25px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #ffdd59, #f9ca24);
+            border: none;
+            border-radius: 25px;
+            color: #333;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .control-btn:hover { transform: scale(1.05); box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+        .control-btn:active { transform: scale(0.98); }
+        .control-btn.secondary { background: rgba(255,255,255,0.2); color: white; border: 2px solid white; }
+        .control-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        #menu-screen, #game-over-screen, #checkpoint-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+        }
+        .menu-title {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ffdd59, #f9ca24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .menu-subtitle {
+            font-size: 14px;
+            color: #ffdd59;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+        .menu-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .menu-stat {
+            background: rgba(0,0,0,0.4);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        .menu-stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffdd59;
+        }
+        .hidden { display: none !important; }
+        
+        .easy-mode-badge {
+            position: absolute;
+            top: 15px;
+            right: 90px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 60;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 3px 15px rgba(78,205,196,0.6); }
+        }
+        
+        .radio-container {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 150;
+            gap: 8px;
+        }
+        #radio-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: rgba(0,0,0,0.3);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        #radio-btn:hover {
+            background: rgba(0,0,0,0.5);
+            transform: scale(1.1);
+            border-color: #ffdd59;
+        }
+        .radio-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+        .radio-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #radio-btn.loading .radio-overlay {
+            opacity: 1;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #radio-btn.playing {
+            border-color: #ff6b6b;
+            animation: pulse-radio 2s infinite;
+        }
+        @keyframes pulse-radio {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(255, 107, 107, 0); }
+        }
+        .radio-label {
+            font-size: 11px;
+            color: white;
+            text-align: center;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            white-space: nowrap;
+            font-weight: 500;
+            max-width: 100px;
+        }
+        
+        #sound-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 150;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #leaderboard-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .leaderboard-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 70vh;
+            overflow-y: auto;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+        .leaderboard-title {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #ffdd59;
+        }
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+        }
+        .leaderboard-item.top-1 { background: linear-gradient(135deg, #ffd700, #ffaa00); }
+        .leaderboard-item.top-2 { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); }
+        .leaderboard-item.top-3 { background: linear-gradient(135deg, #cd7f32, #b87333); }
+        .leaderboard-empty {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 60;
+            animation: particleFly 0.8s ease-out forwards;
+        }
+        @keyframes particleFly {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+        
+        .damage-flash {
+            animation: damageFlash 0.3s ease-out;
+        }
+        @keyframes damageFlash {
+            0%, 100% { filter: none; }
+            50% { filter: sepia(1) hue-rotate(-50deg) saturate(3); }
+        }
+        
+        .checkpoint-reached {
+            animation: checkpointPulse 0.5s ease-out;
+        }
+        @keyframes checkpointPulse {
+            0% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.2); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+        
+        @media (max-width: 350px) {
+            #game-canvas { width: 320px; height: 480px; }
+            .control-btn { padding: 10px 20px; font-size: 14px; }
+            .menu-title { font-size: 28px; }
+            #score-display { font-size: 36px; }
+            #lives-display { font-size: 22px; top: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <audio id="radio-audio" preload="none" crossorigin="anonymous">
+        <source src="https://stream.zeno.fm/ndhkmuknva0uv" type="audio/mpeg">
+    </audio>
+
+    <div id="game-container">
+        <div id="score-display">0</div>
+        <div class="easy-mode-badge">✨ Modo Fácil</div>
+        <div id="lives-display">❤️❤️❤️</div>
+        <div id="checkpoint-indicator">📍 Checkpoint: <span id="checkpoint-score">0</span></div>
+        <div id="encouragement-message"></div>
+        <canvas id="game-canvas" width="400" height="600"></canvas>
+        <div id="controls">
+            <button class="control-btn" onclick="quickRestart()">🔄 Reiniciar</button>
+            <button class="control-btn secondary" onclick="showLeaderboard()">🏆 Ranking</button>
+            <button class="control-btn secondary" onclick="shareScore()">📤 Compartir</button>
+        </div>
+        <div id="menu-screen">
+            <div class="menu-title">🐦 VALEFOR BIRD</div>
+            <div class="menu-subtitle">Esquiva las tuberías<br><br>✨ <strong>3 VIDAS</strong> | 📍 <strong>Checkpoints</strong></div>
+            <div class="menu-stats">
+                <div class="menu-stat">
+                    <div>Mejor Puntuación</div>
+                    <div class="menu-stat-value" id="best-score">0</div>
+                </div>
+            </div>
+            <button class="control-btn" onclick="startGame()">▶️ Jugar</button>
+            <button class="control-btn secondary" onclick="showLeaderboard()">🏆 Ranking</button>
+        </div>
+        <div id="game-over-screen" class="hidden">
+            <div class="menu-title" style="font-size: 36px;">💥 ¡Fin del Juego!</div>
+            <div class="menu-subtitle">El pajarito se quedó sin vida</div>
+            <div class="menu-stats">
+                <div class="menu-stat">
+                    <div>Puntuación</div>
+                    <div class="menu-stat-value" id="final-score">0</div>
+                </div>
+                <div class="menu-stat">
+                    <div>Mejor</div>
+                    <div class="menu-stat-value" id="best-score-final">0</div>
+                </div>
+                <div class="menu-stat">
+                    <div>Checkpoint</div>
+                    <div class="menu-stat-value" id="checkpoint-final">0</div>
+                </div>
+            </div>
+            <button class="control-btn" onclick="startGame()">🔄 Jugar Otra Vez</button>
+            <button class="control-btn secondary" onclick="showMenu()">🏠 Menú</button>
+            <button class="control-btn secondary" onclick="shareScore()">📤 Compartir</button>
+        </div>
+        <div id="checkpoint-screen" class="hidden">
+            <div class="menu-title" style="font-size: 48px;">📍 ¡Checkpoint!</div>
+            <div class="menu-subtitle">¡Progreso guardado!<br>Si pierdes una vida, volverás aquí.</div>
+            <div class="menu-stat" style="margin-bottom: 20px;">
+                <div>Puntuación guardada</div>
+                <div class="menu-stat-value" id="checkpoint-save-score">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="radio-container">
+        <button id="radio-btn" onclick="toggleRadio()">
+            <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgqvizWNyyqSmA1V6SOmns4wLWw849mHxRjABDTG0o2iyoHbsDPc9nc0rQW4iW6bfpIQLNn6pOgPlWsygdsuMury7g3ss1yJwDOJY1kHXyQwi53Lp9cyIMduU3NzUVaeme8n6V3_yhhGMEIb5XrCmuBejA6FoE5Uyt9ZmNYAqCxqhFmJf2wA9DpTtz9xg/s640/s80y90.png" class="radio-img">
+            <div class="radio-overlay">🔄</div>
+        </button>
+        <span class="radio-label">80 y 90 Radio</span>
+    </div>
+    <button id="sound-btn" onclick="toggleSound()">🔊</button>
+    <div id="leaderboard-screen" class="hidden">
+        <div class="leaderboard-content">
+            <div class="leaderboard-title">🏆 Top Pilotos</div>
+            <div id="leaderboard-list"></div>
+            <div id="leaderboard-empty" class="leaderboard-empty">¡No hay récords aún!<br>¡Sé el primero! 🐦</div>
+        </div>
+        <button class="control-btn secondary" onclick="hideLeaderboard()" style="margin-top: 20px;">Cerrar</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const radioAudio = document.getElementById('radio-audio');
+        const radioBtn = document.getElementById('radio-btn');
+        let radioEnabled = false, radioLoading = false;
+        let playerName = '', gameRunning = false, soundEnabled = true, audioContext = null;
+        let score = 0, bestScore = 0, lives = 3, MAX_LIVES = 3;
+        let checkpointScore = 0, checkpointBirdY = 300, checkpointPipes = [];
+
+        const BIRD_SIZE = 100, BIRD_X = 50;
+        let birdY = 300, birdVelocity = 0;
+        const GRAVITY = 0.3, JUMP_STRENGTH = -7;
+        let birdFrame = 0, birdFrameCount = 0;
+        
+        const birdImage = new Image();
+        birdImage.src = 'pajarito.png';
+        let birdImageLoaded = false;
+        birdImage.onload = () => { birdImageLoaded = true; };
+
+        let pipes = [];
+        const PIPE_WIDTH = 60, PIPE_GAP = 250, PIPE_SPEED = 2;
+        let pipeTimer = 0;
+        const PIPE_SPAWN_INTERVAL = 150, CHECKPOINT_INTERVAL = 10;
+
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const livesDisplay = document.getElementById('lives-display');
+        const checkpointIndicator = document.getElementById('checkpoint-indicator');
+        const checkpointScoreEl = document.getElementById('checkpoint-score');
+        const encouragementMessage = document.getElementById('encouragement-message');
+        const menuScreen = document.getElementById('menu-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const checkpointScreen = document.getElementById('checkpoint-screen');
+        const finalScoreEl = document.getElementById('final-score');
+        const bestScoreFinalEl = document.getElementById('best-score-final');
+        const checkpointFinalEl = document.getElementById('checkpoint-final');
+        const checkpointSaveScoreEl = document.getElementById('checkpoint-save-score');
+        const bestScoreEl = document.getElementById('best-score');
+        const leaderboardScreen = document.getElementById('leaderboard-screen');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const leaderboardEmpty = document.getElementById('leaderboard-empty');
+
+        const encouragementMessages = [
+            '¡Vamos! 💪', '¡Tú puedes! ⭐', '¡Asombroso! 🌟', '¡Espetacular! 🎉',
+            '¡Whola! 😄', '¡Extraordinario! 🏆', '¡Increíble! 🚀', '¡Genial! 😎',
+            '¡Sigue así! 💫', '¡Eres crack! 👑', '¡Imparable! 🔥', '¡Fantástico! ✨',
+            '¡Brutal! 💥', '¡Maestro! 🎯', '¡Legendario! 🌈'
+        ];
+
+        const milestoneMessages = {
+            5: '¡5 Puntos! 🎯', 10: '¡10 Puntos! 🎉', 15: '¡15 Puntos! ⭐',
+            20: '¡20 Puntos! 🌟', 25: '¡25 Puntos! 🔥', 30: '¡30 Puntos! 👑',
+            35: '¡35 Puntos! 💎', 40: '¡40 Puntos! 🏆', 45: '¡45 Puntos! 🚀',
+            50: '¡50 Puntos! 🌈', 60: '¡60 Puntos! 💫', 70: '¡70 Puntos! ⚡',
+            80: '¡80 Puntos! 🎯', 90: '¡90 Puntos! 🎪', 100: '¡100 Puntos! 🏅'
+        };
+
+        function initPlayerName() {
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const u = tg.initDataUnsafe.user;
+                playerName = u.username ? '@'+u.username : (u.first_name || 'Piloto');
+            } else {
+                playerName = localStorage.getItem('flappy_player_name') || 'Piloto';
+            }
+        }
+
+        function toggleRadio() {
+            if (radioLoading) return;
+            radioEnabled = !radioEnabled;
+            if (radioEnabled) {
+                radioLoading = true; radioBtn.classList.add('loading');
+                radioAudio.pause(); radioAudio.currentTime = 0;
+                radioAudio.play().then(() => { radioLoading = false; radioBtn.classList.remove('loading'); radioBtn.classList.add('playing'); })
+                .catch(() => { radioEnabled = false; radioLoading = false; radioBtn.classList.remove('loading'); });
+            } else { radioAudio.pause(); radioBtn.classList.remove('playing', 'loading'); }
+        }
+
+        function initAudio() { if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)(); }
+        function playSound(type) {
+            if (!soundEnabled || !audioContext) return;
+            const osc = audioContext.createOscillator(), gain = audioContext.createGain();
+            osc.connect(gain); gain.connect(audioContext.destination);
+            if (type === 'jump') {
+                osc.frequency.value = 400; osc.type = 'sine';
+                gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                osc.start(); osc.stop(audioContext.currentTime + 0.15);
+            } else if (type === 'score') {
+                osc.frequency.value = 800; osc.type = 'sine';
+                gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                osc.start(); osc.stop(audioContext.currentTime + 0.1);
+            } else if (type === 'checkpoint') {
+                osc.frequency.value = 600; osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                setTimeout(() => {
+                    const o2 = audioContext.createOscillator(), g2 = audioContext.createGain();
+                    o2.connect(g2); g2.connect(audioContext.destination);
+                    o2.frequency.value = 900; o2.type = 'sine';
+                    g2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    g2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                    o2.start(); o2.stop(audioContext.currentTime + 0.2);
+                }, 150);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                osc.start(); osc.stop(audioContext.currentTime + 0.3);
+            } else if (type === 'damage') {
+                osc.frequency.value = 250; osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                osc.start(); osc.stop(audioContext.currentTime + 0.3);
+            } else if (type === 'gameover') {
+                osc.frequency.value = 200; osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                osc.start(); osc.stop(audioContext.currentTime + 0.5);
+            } else if (type === 'encouragement') {
+                osc.frequency.value = 700; osc.type = 'sine';
+                gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                osc.start(); osc.stop(audioContext.currentTime + 0.2);
+            }
+        }
+        function toggleSound() { soundEnabled = !soundEnabled; document.getElementById('sound-btn').innerText = soundEnabled ? '🔊' : '🔇'; }
+
+        function showEncouragement(isMilestone = false, milestoneScore = 0) {
+            let message = '';
+            if (isMilestone && milestoneMessages[milestoneScore]) {
+                message = milestoneMessages[milestoneScore];
+            } else {
+                message = encouragementMessages[Math.floor(Math.random() * encouragementMessages.length)];
+            }
+            encouragementMessage.innerText = message;
+            encouragementMessage.classList.remove('show');
+            void encouragementMessage.offsetWidth;
+            encouragementMessage.classList.add('show');
+            playSound('encouragement');
+            if (isMilestone && milestoneScore % 10 === 0) {
+                createParticles(canvas.width/2, canvas.height/2, '#ffdd59');
+            }
+        }
+
+        function drawBird() {
+            birdFrameCount++;
+            if (birdFrameCount % 10 === 0) { birdFrame = (birdFrame + 1) % 3; }
+            const rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, birdVelocity * 0.05));
+            ctx.save();
+            ctx.translate(BIRD_X + BIRD_SIZE/2, birdY + BIRD_SIZE/2);
+            ctx.rotate(rotation);
+            if (birdImageLoaded) {
+                ctx.drawImage(birdImage, -BIRD_SIZE/2, -BIRD_SIZE/2, BIRD_SIZE, BIRD_SIZE);
+            } else {
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, BIRD_SIZE/2, BIRD_SIZE/2.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(BIRD_SIZE/4, -BIRD_SIZE/6, BIRD_SIZE/6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(BIRD_SIZE/3, -BIRD_SIZE/6, BIRD_SIZE/12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FF6B6B';
+                ctx.beginPath();
+                ctx.moveTo(BIRD_SIZE/3, 0);
+                ctx.lineTo(BIRD_SIZE/2 + 10, BIRD_SIZE/8);
+                ctx.lineTo(BIRD_SIZE/3, BIRD_SIZE/4);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawPipes() {
+            pipes.forEach(pipe => {
+                ctx.fillStyle = '#73BF2E';
+                ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
+                ctx.strokeStyle = '#2D5A1E';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
+                ctx.fillRect(pipe.x - 5, pipe.topHeight - 30, PIPE_WIDTH + 10, 30);
+                ctx.strokeRect(pipe.x - 5, pipe.topHeight - 30, PIPE_WIDTH + 10, 30);
+                const bottomY = pipe.topHeight + PIPE_GAP;
+                ctx.fillRect(pipe.x, bottomY, PIPE_WIDTH, canvas.height - bottomY);
+                ctx.strokeRect(pipe.x, bottomY, PIPE_WIDTH, canvas.height - bottomY);
+                ctx.fillRect(pipe.x - 5, bottomY, PIPE_WIDTH + 10, 30);
+                ctx.strokeRect(pipe.x - 5, bottomY, PIPE_WIDTH + 10, 30);
+                if (pipe.isCheckpoint) {
+                    ctx.fillStyle = '#4ecdc4';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.fillText('📍', pipe.x + 15, pipe.topHeight + PIPE_GAP/2 + 7);
+                }
+            });
+        }
+
+        function drawBackground() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#70C5CE');
+            gradient.addColorStop(1, '#B8E8EE');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.beginPath();
+            ctx.arc(100, 100, 30, 0, Math.PI * 2);
+            ctx.arc(140, 100, 40, 0, Math.PI * 2);
+            ctx.arc(180, 100, 30, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(300, 150, 25, 0, Math.PI * 2);
+            ctx.arc(330, 150, 35, 0, Math.PI * 2);
+            ctx.arc(360, 150, 25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#DED895';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            ctx.fillStyle = '#73BF2E';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 10);
+        }
+
+        // ✅ COLISIÓN CON SUELO AJUSTADA
+        function updateBird() {
+            birdVelocity += GRAVITY;
+            birdY += birdVelocity;
+            
+            if (birdY < 0) {
+                birdY = 0;
+                birdVelocity = 0;
+            }
+            // ✅ AHORA: El pájaro puede tocar el suelo visualmente antes de morir
+            // Margen de 20px para que la colisión sea más justa
+            if (birdY + BIRD_SIZE - 20 > canvas.height - 50) {
+                loseLife();
+            }
+        }
+
+        function updatePipes() {
+            pipeTimer++;
+            if (pipeTimer > PIPE_SPAWN_INTERVAL) {
+                const minPipeHeight = 80;
+                const maxPipeHeight = canvas.height - PIPE_GAP - minPipeHeight - 50;
+                const topHeight = Math.random() * (maxPipeHeight - minPipeHeight) + minPipeHeight;
+                const isCheckpoint = score > 0 && score % CHECKPOINT_INTERVAL === 0;
+                pipes.push({ x: canvas.width, topHeight: topHeight, passed: false, isCheckpoint: isCheckpoint });
+                pipeTimer = 0;
+            }
+            pipes.forEach(pipe => {
+                pipe.x -= PIPE_SPEED;
+                if (!pipe.passed && pipe.x + PIPE_WIDTH < BIRD_X) {
+                    score++;
+                    pipe.passed = true;
+                    scoreDisplay.innerText = score;
+                    playSound('score');
+                    createParticles(BIRD_X + BIRD_SIZE/2, birdY + BIRD_SIZE/2, '#FFD700');
+                    if (score % 10 === 0 && milestoneMessages[score]) {
+                        showEncouragement(true, score);
+                    } else if (score % 5 === 0 && score % 10 !== 0) {
+                        showEncouragement(false);
+                    }
+                    if (score % CHECKPOINT_INTERVAL === 0) { saveCheckpoint(); }
+                }
+                if (birdCollision(pipe)) { loseLife(); }
+            });
+            pipes = pipes.filter(pipe => pipe.x + PIPE_WIDTH > 0);
+        }
+
+        function birdCollision(pipe) {
+            const tolerance = 15;
+            const birdRight = BIRD_X + BIRD_SIZE - tolerance;
+            const birdLeft = BIRD_X + tolerance;
+            const birdTop = birdY + tolerance;
+            const birdBottom = birdY + BIRD_SIZE - tolerance;
+            const pipeRight = pipe.x + PIPE_WIDTH;
+            const pipeLeft = pipe.x;
+            if (birdRight > pipeLeft && birdLeft < pipeRight && birdTop < pipe.topHeight) { return true; }
+            if (birdRight > pipeLeft && birdLeft < pipeRight && birdBottom > pipe.topHeight + PIPE_GAP) { return true; }
+            return false;
+        }
+
+        function loseLife() {
+            lives--;
+            updateLivesDisplay();
+            playSound('damage');
+            canvas.classList.add('damage-flash');
+            setTimeout(() => canvas.classList.remove('damage-flash'), 300);
+            if (tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('error'); }
+            if (lives <= 0) { gameOver(); }
+            else {
+                birdY = checkpointBirdY;
+                birdVelocity = 0;
+                pipes = [...checkpointPipes];
+                score = checkpointScore;
+                scoreDisplay.innerText = score;
+                if (tg && tg.HapticFeedback) { tg.HapticFeedback.impactOccurred('medium'); }
+            }
+        }
+
+        function saveCheckpoint() {
+            checkpointScore = score;
+            checkpointBirdY = birdY;
+            checkpointPipes = pipes.map(p => ({...p}));
+            checkpointIndicator.style.display = 'block';
+            checkpointScoreEl.innerText = checkpointScore;
+            checkpointIndicator.classList.add('checkpoint-reached');
+            setTimeout(() => checkpointIndicator.classList.remove('checkpoint-reached'), 500);
+            playSound('checkpoint');
+            createParticles(BIRD_X + BIRD_SIZE/2, birdY + BIRD_SIZE/2, '#4ecdc4');
+            checkpointSaveScoreEl.innerText = checkpointScore;
+            checkpointScreen.classList.remove('hidden');
+            setTimeout(() => checkpointScreen.classList.add('hidden'), 2000);
+        }
+
+        function updateLivesDisplay() {
+            let hearts = '';
+            for (let i = 0; i < lives; i++) { hearts += '❤️'; }
+            livesDisplay.innerText = hearts;
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 8 + 4;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.background = color;
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                const angle = (Math.random() * 360) * (Math.PI / 180);
+                const distance = Math.random() * 80 + 40;
+                particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                particle.style.animationDuration = (Math.random() * 0.4 + 0.4) + 's';
+                document.body.appendChild(particle);
+                setTimeout(() => particle.remove(), 800);
+            }
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            updateBird();
+            updatePipes();
+            drawPipes();
+            drawBird();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            initAudio();
+            menuScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            checkpointScreen.classList.add('hidden');
+            score = 0; lives = MAX_LIVES;
+            birdY = 300; birdVelocity = 0;
+            birdFrame = 0; birdFrameCount = 0;
+            pipes = []; pipeTimer = 0;
+            checkpointScore = 0; checkpointBirdY = 300; checkpointPipes = [];
+            gameRunning = true;
+            scoreDisplay.innerText = score;
+            updateLivesDisplay();
+            checkpointIndicator.style.display = 'none';
+            gameLoop();
+        }
+
+        function quickRestart() {
+            if (!gameRunning && !gameOverScreen.classList.contains('hidden')) { startGame(); }
+            else if (gameRunning) { startGame(); }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            playSound('gameover');
+            if (score > bestScore) { bestScore = score; localStorage.setItem('flappy_best_score', bestScore); }
+            finalScoreEl.innerText = score;
+            bestScoreFinalEl.innerText = bestScore;
+            checkpointFinalEl.innerText = checkpointScore;
+            gameOverScreen.classList.remove('hidden');
+            saveScore(score);
+            if (tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('error'); }
+        }
+
+        function jump() {
+            if (!gameRunning) return;
+            birdVelocity = JUMP_STRENGTH;
+            playSound('jump');
+            createParticles(BIRD_X + BIRD_SIZE/2, birdY + BIRD_SIZE/2, '#ffffff');
+            if (tg && tg.HapticFeedback) { tg.HapticFeedback.impactOccurred('light'); }
+        }
+
+        canvas.addEventListener('click', jump);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (gameRunning) jump();
+                else if (!menuScreen.classList.contains('hidden')) startGame();
+                else if (!gameOverScreen.classList.contains('hidden')) startGame();
+            }
+        });
+
+        function saveScore(score) {
+            const scores = getScores();
+            scores.push({ name: playerName, score: score, date: new Date().toISOString() });
+            scores.sort((a, b) => b.score - a.score);
+            scores.splice(50);
+            localStorage.setItem('flappy_scores', JSON.stringify(scores));
+        }
+        function getScores() { const s = localStorage.getItem('flappy_scores'); return s ? JSON.parse(s) : []; }
+
+        function showLeaderboard() {
+            const scores = getScores();
+            leaderboardList.innerHTML = '';
+            if (scores.length === 0) { leaderboardEmpty.style.display = 'block'; }
+            else {
+                leaderboardEmpty.style.display = 'none';
+                scores.slice(0, 10).forEach((entry, idx) => {
+                    const li = document.createElement('div');
+                    li.className = 'leaderboard-item';
+                    if (idx === 0) li.classList.add('top-1');
+                    else if (idx === 1) li.classList.add('top-2');
+                    else if (idx === 2) li.classList.add('top-3');
+                    const emoji = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
+                    li.innerHTML = `<span>${emoji} #${idx+1} ${entry.name}</span><span style="color:#ffdd59">${entry.score} pts</span>`;
+                    leaderboardList.appendChild(li);
+                });
+            }
+            leaderboardScreen.classList.remove('hidden');
+        }
+        function hideLeaderboard() { leaderboardScreen.classList.add('hidden'); }
+        function showMenu() { gameOverScreen.classList.add('hidden'); menuScreen.classList.remove('hidden'); bestScoreEl.innerText = bestScore; }
+
+        function shareScore() {
+            const msg = `🐦 ¡Jugué Valefor Bird!\n\n🏆 Mi puntuación: ${score}\n❤️ Vidas: ${lives}/${MAX_LIVES}\n📍 Checkpoint: ${checkpointScore}\n\n👉 ¡Intenta superarme!`;
+            navigator.clipboard.writeText(msg).then(() => {
+                if (tg && tg.showAlert) tg.showAlert('📋 ¡Copiado! Pega en Telegram');
+                else alert('📋 ¡Copiado! Pega en Telegram');
+            });
+        }
+
+        function init() {
+            initPlayerName();
+            bestScore = parseInt(localStorage.getItem('flappy_best_score')) || 0;
+            bestScoreEl.innerText = bestScore;
+            updateLivesDisplay();
+            drawBackground();
+            drawBird();
+        }
+        init();
+    </script>
+</body>
+</html>
