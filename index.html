@@ -56,21 +56,6 @@
             z-index: 50;
             pointer-events: none;
         }
-        #checkpoint-indicator {
-            position: absolute;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 14px;
-            color: #4ecdc4;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 15px;
-            border-radius: 15px;
-            z-index: 50;
-            pointer-events: none;
-            display: none;
-        }
-        
         #encouragement-message {
             position: absolute;
             top: 50%;
@@ -102,7 +87,6 @@
         @media (max-width: 350px) {
             #encouragement-message { font-size: 24px; padding: 15px 30px; }
         }
-        
         #controls {
             display: flex;
             flex-wrap: wrap;
@@ -126,8 +110,7 @@
         .control-btn:active { transform: scale(0.98); }
         .control-btn.secondary { background: rgba(255,255,255,0.2); color: white; border: 2px solid white; }
         .control-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        
-        #menu-screen, #game-over-screen, #checkpoint-screen {
+        #menu-screen, #game-over-screen {
             position: absolute;
             top: 0;
             left: 0;
@@ -175,7 +158,6 @@
             color: #ffdd59;
         }
         .hidden { display: none !important; }
-        
         .easy-mode-badge {
             position: absolute;
             top: 15px;
@@ -194,7 +176,6 @@
             0%, 100% { box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
             50% { box-shadow: 0 3px 15px rgba(78,205,196,0.6); }
         }
-        
         .radio-container {
             position: fixed;
             top: 15px;
@@ -270,7 +251,6 @@
             font-weight: 500;
             max-width: 100px;
         }
-        
         #sound-btn {
             position: fixed;
             top: 15px;
@@ -288,7 +268,6 @@
             align-items: center;
             justify-content: center;
         }
-        
         #leaderboard-screen {
             position: fixed;
             top: 0;
@@ -338,7 +317,6 @@
             padding: 20px;
             font-size: 14px;
         }
-        
         .particle {
             position: absolute;
             border-radius: 50%;
@@ -350,7 +328,6 @@
             0% { transform: translate(0, 0) scale(1); opacity: 1; }
             100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
         }
-        
         .damage-flash {
             animation: damageFlash 0.3s ease-out;
         }
@@ -358,16 +335,6 @@
             0%, 100% { filter: none; }
             50% { filter: sepia(1) hue-rotate(-50deg) saturate(3); }
         }
-        
-        .checkpoint-reached {
-            animation: checkpointPulse 0.5s ease-out;
-        }
-        @keyframes checkpointPulse {
-            0% { transform: translateX(-50%) scale(1); }
-            50% { transform: translateX(-50%) scale(1.2); }
-            100% { transform: translateX(-50%) scale(1); }
-        }
-        
         @media (max-width: 350px) {
             #game-canvas { width: 320px; height: 480px; }
             .control-btn { padding: 10px 20px; font-size: 14px; }
@@ -381,12 +348,10 @@
     <audio id="radio-audio" preload="none" crossorigin="anonymous">
         <source src="https://stream.zeno.fm/ndhkmuknva0uv" type="audio/mpeg">
     </audio>
-
     <div id="game-container">
         <div id="score-display">0</div>
         <div class="easy-mode-badge">✨ Modo Fácil</div>
         <div id="lives-display">❤️❤️❤️</div>
-        <div id="checkpoint-indicator">📍 Checkpoint: <span id="checkpoint-score">0</span></div>
         <div id="encouragement-message"></div>
         <canvas id="game-canvas" width="400" height="600"></canvas>
         <div id="controls">
@@ -396,7 +361,7 @@
         </div>
         <div id="menu-screen">
             <div class="menu-title">🐦 VALEFOR BIRD</div>
-            <div class="menu-subtitle">Esquiva las tuberías<br><br>✨ <strong>3 VIDAS</strong> | 📍 <strong>Checkpoints</strong></div>
+            <div class="menu-subtitle">Esquiva las tuberías<br><br>✨ <strong>3 VIDAS</strong></div>
             <div class="menu-stats">
                 <div class="menu-stat">
                     <div>Mejor Puntuación</div>
@@ -418,25 +383,12 @@
                     <div>Mejor</div>
                     <div class="menu-stat-value" id="best-score-final">0</div>
                 </div>
-                <div class="menu-stat">
-                    <div>Checkpoint</div>
-                    <div class="menu-stat-value" id="checkpoint-final">0</div>
-                </div>
             </div>
             <button class="control-btn" onclick="startGame()">🔄 Jugar Otra Vez</button>
             <button class="control-btn secondary" onclick="showMenu()">🏠 Menú</button>
             <button class="control-btn secondary" onclick="shareScore()">📤 Compartir</button>
         </div>
-        <div id="checkpoint-screen" class="hidden">
-            <div class="menu-title" style="font-size: 48px;">📍 ¡Checkpoint!</div>
-            <div class="menu-subtitle">¡Progreso guardado!<br>Si pierdes una vida, volverás aquí.</div>
-            <div class="menu-stat" style="margin-bottom: 20px;">
-                <div>Puntuación guardada</div>
-                <div class="menu-stat-value" id="checkpoint-save-score">0</div>
-            </div>
-        </div>
     </div>
-
     <div class="radio-container">
         <button id="radio-btn" onclick="toggleRadio()">
             <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgqvizWNyyqSmA1V6SOmns4wLWw849mHxRjABDTG0o2iyoHbsDPc9nc0rQW4iW6bfpIQLNn6pOgPlWsygdsuMury7g3ss1yJwDOJY1kHXyQwi53Lp9cyIMduU3NzUVaeme8n6V3_yhhGMEIb5XrCmuBejA6FoE5Uyt9ZmNYAqCxqhFmJf2wA9DpTtz9xg/s640/s80y90.png" class="radio-img">
@@ -464,7 +416,6 @@
         let radioEnabled = false, radioLoading = false;
         let playerName = '', gameRunning = false, soundEnabled = true, audioContext = null;
         let score = 0, bestScore = 0, lives = 3, MAX_LIVES = 3;
-        let checkpointScore = 0, checkpointBirdY = 300, checkpointPipes = [];
 
         const BIRD_SIZE = 100, BIRD_X = 50;
         let birdY = 300, birdVelocity = 0;
@@ -479,22 +430,17 @@
         let pipes = [];
         const PIPE_WIDTH = 60, PIPE_GAP = 250, PIPE_SPEED = 2;
         let pipeTimer = 0;
-        const PIPE_SPAWN_INTERVAL = 150, CHECKPOINT_INTERVAL = 10;
+        const PIPE_SPAWN_INTERVAL = 150;
 
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('score-display');
         const livesDisplay = document.getElementById('lives-display');
-        const checkpointIndicator = document.getElementById('checkpoint-indicator');
-        const checkpointScoreEl = document.getElementById('checkpoint-score');
         const encouragementMessage = document.getElementById('encouragement-message');
         const menuScreen = document.getElementById('menu-screen');
         const gameOverScreen = document.getElementById('game-over-screen');
-        const checkpointScreen = document.getElementById('checkpoint-screen');
         const finalScoreEl = document.getElementById('final-score');
         const bestScoreFinalEl = document.getElementById('best-score-final');
-        const checkpointFinalEl = document.getElementById('checkpoint-final');
-        const checkpointSaveScoreEl = document.getElementById('checkpoint-save-score');
         const bestScoreEl = document.getElementById('best-score');
         const leaderboardScreen = document.getElementById('leaderboard-screen');
         const leaderboardList = document.getElementById('leaderboard-list');
@@ -550,19 +496,6 @@
                 gain.gain.setValueAtTime(0.15, audioContext.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
                 osc.start(); osc.stop(audioContext.currentTime + 0.1);
-            } else if (type === 'checkpoint') {
-                osc.frequency.value = 600; osc.type = 'sine';
-                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
-                setTimeout(() => {
-                    const o2 = audioContext.createOscillator(), g2 = audioContext.createGain();
-                    o2.connect(g2); g2.connect(audioContext.destination);
-                    o2.frequency.value = 900; o2.type = 'sine';
-                    g2.gain.setValueAtTime(0.3, audioContext.currentTime);
-                    g2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-                    o2.start(); o2.stop(audioContext.currentTime + 0.2);
-                }, 150);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-                osc.start(); osc.stop(audioContext.currentTime + 0.3);
             } else if (type === 'damage') {
                 osc.frequency.value = 250; osc.type = 'sawtooth';
                 gain.gain.setValueAtTime(0.3, audioContext.currentTime);
@@ -645,11 +578,6 @@
                 ctx.strokeRect(pipe.x, bottomY, PIPE_WIDTH, canvas.height - bottomY);
                 ctx.fillRect(pipe.x - 5, bottomY, PIPE_WIDTH + 10, 30);
                 ctx.strokeRect(pipe.x - 5, bottomY, PIPE_WIDTH + 10, 30);
-                if (pipe.isCheckpoint) {
-                    ctx.fillStyle = '#4ecdc4';
-                    ctx.font = 'bold 20px Arial';
-                    ctx.fillText('📍', pipe.x + 15, pipe.topHeight + PIPE_GAP/2 + 7);
-                }
             });
         }
 
@@ -676,20 +604,11 @@
             ctx.fillRect(0, canvas.height - 50, canvas.width, 10);
         }
 
-        // ✅ COLISIÓN CON SUELO AJUSTADA
         function updateBird() {
             birdVelocity += GRAVITY;
             birdY += birdVelocity;
-            
-            if (birdY < 0) {
-                birdY = 0;
-                birdVelocity = 0;
-            }
-            // ✅ AHORA: El pájaro puede tocar el suelo visualmente antes de morir
-            // Margen de 20px para que la colisión sea más justa
-            if (birdY + BIRD_SIZE - 20 > canvas.height - 50) {
-                loseLife();
-            }
+            if (birdY < 0) { birdY = 0; birdVelocity = 0; }
+            if (birdY + BIRD_SIZE - 20 > canvas.height - 50) { loseLife(); }
         }
 
         function updatePipes() {
@@ -698,8 +617,7 @@
                 const minPipeHeight = 80;
                 const maxPipeHeight = canvas.height - PIPE_GAP - minPipeHeight - 50;
                 const topHeight = Math.random() * (maxPipeHeight - minPipeHeight) + minPipeHeight;
-                const isCheckpoint = score > 0 && score % CHECKPOINT_INTERVAL === 0;
-                pipes.push({ x: canvas.width, topHeight: topHeight, passed: false, isCheckpoint: isCheckpoint });
+                pipes.push({ x: canvas.width, topHeight: topHeight, passed: false });
                 pipeTimer = 0;
             }
             pipes.forEach(pipe => {
@@ -715,7 +633,6 @@
                     } else if (score % 5 === 0 && score % 10 !== 0) {
                         showEncouragement(false);
                     }
-                    if (score % CHECKPOINT_INTERVAL === 0) { saveCheckpoint(); }
                 }
                 if (birdCollision(pipe)) { loseLife(); }
             });
@@ -742,30 +659,16 @@
             canvas.classList.add('damage-flash');
             setTimeout(() => canvas.classList.remove('damage-flash'), 300);
             if (tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('error'); }
-            if (lives <= 0) { gameOver(); }
-            else {
-                birdY = checkpointBirdY;
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                // ✅ REINICIAR POSICIÓN PERO MANTENER PUNTUACIÓN
+                birdY = 300;
                 birdVelocity = 0;
-                pipes = [...checkpointPipes];
-                score = checkpointScore;
-                scoreDisplay.innerText = score;
+                pipes = [];
+                pipeTimer = 0;
                 if (tg && tg.HapticFeedback) { tg.HapticFeedback.impactOccurred('medium'); }
             }
-        }
-
-        function saveCheckpoint() {
-            checkpointScore = score;
-            checkpointBirdY = birdY;
-            checkpointPipes = pipes.map(p => ({...p}));
-            checkpointIndicator.style.display = 'block';
-            checkpointScoreEl.innerText = checkpointScore;
-            checkpointIndicator.classList.add('checkpoint-reached');
-            setTimeout(() => checkpointIndicator.classList.remove('checkpoint-reached'), 500);
-            playSound('checkpoint');
-            createParticles(BIRD_X + BIRD_SIZE/2, birdY + BIRD_SIZE/2, '#4ecdc4');
-            checkpointSaveScoreEl.innerText = checkpointScore;
-            checkpointScreen.classList.remove('hidden');
-            setTimeout(() => checkpointScreen.classList.add('hidden'), 2000);
         }
 
         function updateLivesDisplay() {
@@ -809,16 +712,13 @@
             initAudio();
             menuScreen.classList.add('hidden');
             gameOverScreen.classList.add('hidden');
-            checkpointScreen.classList.add('hidden');
             score = 0; lives = MAX_LIVES;
             birdY = 300; birdVelocity = 0;
             birdFrame = 0; birdFrameCount = 0;
             pipes = []; pipeTimer = 0;
-            checkpointScore = 0; checkpointBirdY = 300; checkpointPipes = [];
             gameRunning = true;
             scoreDisplay.innerText = score;
             updateLivesDisplay();
-            checkpointIndicator.style.display = 'none';
             gameLoop();
         }
 
@@ -833,7 +733,6 @@
             if (score > bestScore) { bestScore = score; localStorage.setItem('flappy_best_score', bestScore); }
             finalScoreEl.innerText = score;
             bestScoreFinalEl.innerText = bestScore;
-            checkpointFinalEl.innerText = checkpointScore;
             gameOverScreen.classList.remove('hidden');
             saveScore(score);
             if (tg && tg.HapticFeedback) { tg.HapticFeedback.notificationOccurred('error'); }
@@ -890,7 +789,7 @@
         function showMenu() { gameOverScreen.classList.add('hidden'); menuScreen.classList.remove('hidden'); bestScoreEl.innerText = bestScore; }
 
         function shareScore() {
-            const msg = `🐦 ¡Jugué Valefor Bird!\n\n🏆 Mi puntuación: ${score}\n❤️ Vidas: ${lives}/${MAX_LIVES}\n📍 Checkpoint: ${checkpointScore}\n\n👉 ¡Intenta superarme!`;
+            const msg = `🐦 ¡Jugué Valefor Bird!\n\n🏆 Mi puntuación: ${score}\n❤️ Vidas: ${lives}/${MAX_LIVES}\n\n👉 ¡Intenta superarme!`;
             navigator.clipboard.writeText(msg).then(() => {
                 if (tg && tg.showAlert) tg.showAlert('📋 ¡Copiado! Pega en Telegram');
                 else alert('📋 ¡Copiado! Pega en Telegram');
