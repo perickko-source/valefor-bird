@@ -835,7 +835,7 @@ function showLeaderboard() {
 function hideLeaderboard() { leaderboardScreen.classList.add('hidden'); }
 function showMenu() { gameOverScreen.classList.add('hidden'); menuScreen.classList.remove('hidden'); bestScoreEl.innerText = bestScore; }
 
-// 📤 COMPARTIR - URL ACTUALIZADA ✅
+// 📤 COMPARTIR - URL ACTUALIZADA ✅ (sin espacios)
 function shareScore() {
   const gameUrl = 'https://t.me/Valefor_bird_bot';
   const msg = `🐦 ¡Jugué Valefor Bird!\n\n🏆 Mi puntuación: ${score}\n❤️ Vidas: ${lives}/${MAX_LIVES}\n\n👉 ¡Intenta superarme!\n\n🔗 ${gameUrl}`;
