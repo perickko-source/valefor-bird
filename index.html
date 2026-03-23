@@ -55,11 +55,12 @@ body {
 }
 #lives-display {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  bottom: 140px;
+  left: 20px;
   font-size: 28px;
   z-index: 50;
   pointer-events: none;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
 }
 #encouragement-message {
   position: absolute;
@@ -89,6 +90,7 @@ body {
 }
 @media (max-width: 350px) {
   #encouragement-message { font-size: 24px; padding: 15px 30px; }
+  #lives-display { font-size: 22px; bottom: 135px; left: 15px; }
 }
 #controls {
   display: flex;
@@ -341,7 +343,6 @@ body {
   .control-btn { padding: 10px 20px; font-size: 14px; }
   .menu-title { font-size: 28px; }
   #score-display { font-size: 36px; }
-  #lives-display { font-size: 22px; top: 25px; }
 }
 </style>
 </head>
@@ -354,17 +355,14 @@ function initTelegram() {
   if (!tg) return;
   tg.ready();
   
-  // Detectar si es Inline Game (?game=) o Web App (Menu Button)
   const isInlineGame = window.location.href.includes('?game=');
   
   if (isInlineGame) {
-    // En Inline: NO expandir, ajustar estilos para iframe
     document.body.style.overflow = 'auto';
     document.body.style.height = 'auto';
     document.documentElement.style.overflow = 'auto';
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
   } else {
-    // En Web App: expandir normalmente
     if (tg.expand) tg.expand();
   }
   
@@ -835,7 +833,7 @@ function showLeaderboard() {
 function hideLeaderboard() { leaderboardScreen.classList.add('hidden'); }
 function showMenu() { gameOverScreen.classList.add('hidden'); menuScreen.classList.remove('hidden'); bestScoreEl.innerText = bestScore; }
 
-// 📤 COMPARTIR - URL ACTUALIZADA ✅ (sin espacios)
+// 📤 COMPARTIR - URL ACTUALIZADA ✅
 function shareScore() {
   const gameUrl = 'https://t.me/Valefor_bird_bot';
   const msg = `🐦 ¡Jugué Valefor Bird!\n\n🏆 Mi puntuación: ${score}\n❤️ Vidas: ${lives}/${MAX_LIVES}\n\n👉 ¡Intenta superarme!\n\n🔗 ${gameUrl}`;
