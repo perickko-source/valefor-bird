@@ -662,7 +662,6 @@
             if (lives <= 0) {
                 gameOver();
             } else {
-                // ✅ REINICIAR POSICIÓN PERO MANTENER PUNTUACIÓN
                 birdY = 300;
                 birdVelocity = 0;
                 pipes = [];
@@ -788,8 +787,10 @@
         function hideLeaderboard() { leaderboardScreen.classList.add('hidden'); }
         function showMenu() { gameOverScreen.classList.add('hidden'); menuScreen.classList.remove('hidden'); bestScoreEl.innerText = bestScore; }
 
+        // 📤 COMPARTIR - URL ACTUALIZADA ✅
         function shareScore() {
-            const msg = `🐦 ¡Jugué Valefor Bird!\n\n🏆 Mi puntuación: ${score}\n❤️ Vidas: ${lives}/${MAX_LIVES}\n\n👉 ¡Intenta superarme!`;
+            const gameUrl = 'https://t.me/Valefor_bird_bot';
+            const msg = `🐦 ¡Jugué Valefor Bird!\n\n🏆 Mi puntuación: ${score}\n❤️ Vidas: ${lives}/${MAX_LIVES}\n\n👉 ¡Intenta superarme!\n\n🔗 ${gameUrl}`;
             navigator.clipboard.writeText(msg).then(() => {
                 if (tg && tg.showAlert) tg.showAlert('📋 ¡Copiado! Pega en Telegram');
                 else alert('📋 ¡Copiado! Pega en Telegram');
