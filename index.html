@@ -351,6 +351,23 @@ body {
   0%, 100% { filter: none; }
   50% { filter: sepia(1) hue-rotate(-50deg) saturate(3); }
 }
+/* 💖 Corazón flotante */
+.heart-powerup {
+  position: absolute;
+  font-size: 40px;
+  z-index: 80;
+  pointer-events: none;
+  animation: heartFloat 2s ease-in-out infinite, heartGlow 1s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.8));
+}
+@keyframes heartFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+@keyframes heartGlow {
+  0% { filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.8)); }
+  100% { filter: drop-shadow(0 0 20px rgba(255, 107, 107, 1)); }
+}
 @media (max-width: 350px) {
   #game-canvas { width: 320px; height: 480px; }
   .control-btn { padding: 10px 20px; font-size: 14px; }
@@ -408,7 +425,7 @@ if (document.readyState === 'loading') {
   
   <div id="menu-screen">
     <div class="menu-title">🐦 VALEFOR BIRD</div>
-    <div class="menu-subtitle">Esquiva las tuberías<br><br>✨ <strong>3 VIDAS</strong></div>
+    <div class="menu-subtitle">Esquiva las tuberías<br><br>✨ <strong>3 VIDAS</strong><br>💖 <strong>Corazones cada 90 pts</strong></div>
     <div class="menu-stats">
       <div class="menu-stat">
         <div>Mejor Puntuación</div>
@@ -465,7 +482,7 @@ let radioEnabled = false, radioLoading = false;
 
 // 🎮 VARIABLES DEL JUEGO
 let playerName = '', gameRunning = false, soundEnabled = true, audioContext = null;
-let score = 0, bestScore = 0, lives = 3, MAX_LIVES = 3;
+let score = 0, bestScore = 0, lives = 3, MAX_LIVES = 5;
 
 const BIRD_SIZE = 100, BIRD_X = 50;
 let birdY = 300, birdVelocity = 0;
@@ -485,8 +502,35 @@ let pipeTimer = 0;
 const PIPE_SPAWN_INTERVAL = 150;
 
 // 🌊 MOVIMIENTO VERTICAL DE TUBERÍAS
-const PIPE_VERTICAL_AMPLITUDE = 50; // Pixeles que se mueven arriba/abajo
-const PIPE_VERTICAL_SPEED = 0.03; // Velocidad del movimiento oscilatorio
+const PIPE_VERTICAL_AMPLITUDE = 50;
+const PIPE_VERTICAL_SPEED = 0.03;
+
+// 💖 CORAZONES FLOTANTES
+let heartPowerUp = null;
+const HEART_SIZE = 40;
+const HEART_SPAWN_INTERVAL = 90; // Cada 90 puntos
+const HEART_LIFETIME = 8000; // 8 segundos de duración
+const HEART_SPEED = 1; // Velocidad de movimiento horizontal
+
+// 🎨 COLORES DE TUBERÍAS POR NIVEL
+const pipeColors = [
+  { minScore: 0, main: '#73BF2E', border: '#2D5A1E', name: '🟢 Clásico' },
+  { minScore: 300, main: '#FF4757', border: '#8B0000', name: '🔴 Peligro' },
+  { minScore: 350, main: '#9B59B6', border: '#4B0082', name: '🟣 Oscuro' },
+  { minScore: 400, main: '#2ECC71', border: '#006400', name: '🟢 Tóxico' },
+  { minScore: 450, main: '#FF6B35', border: '#8B4513', name: '🟠 Fuego' },
+  { minScore: 500, main: '#FFD700', border: '#B8860B', name: '🟡 Divino' }
+];
+
+// 🌙 FONDOS DINÁMICOS POR PUNTUACIÓN (400+)
+const backgroundModes = [
+  { minScore: 0, top: '#70C5CE', bottom: '#B8E8EE', clouds: true, moon: false, name: '☀️ Día' },
+  { minScore: 400, top: '#5A6B8C', bottom: '#8B9DC3', clouds: true, moon: false, name: '🌆 Atardecer' },
+  { minScore: 450, top: '#3D405B', bottom: '#5E548E', clouds: false, moon: true, name: '🌇 Crepúsculo' },
+  { minScore: 500, top: '#2B2D42', bottom: '#3D405B', clouds: false, moon: true, name: '🌃 Noche' },
+  { minScore: 550, top: '#1A1C29', bottom: '#2B2D42', clouds: false, moon: true, name: '🌑 Noche Profunda' },
+  { minScore: 600, top: '#0D0E15', bottom: '#1A1C29', clouds: false, moon: true, name: '🌌 Medianoche' }
+];
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -596,6 +640,11 @@ function playSound(type) {
     gain.gain.setValueAtTime(0.3, audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
     osc.start(); osc.stop(audioContext.currentTime + 0.4);
+  } else if (type === 'heart') {
+    osc.frequency.value = 1200; osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    osc.start(); osc.stop(audioContext.currentTime + 0.3);
   }
 }
 
@@ -632,14 +681,121 @@ function updateDifficultyMode() {
     }
   }
   
-  // Actualizar badge
   difficultyBadge.className = 'easy-mode-badge ' + currentMode.class;
   difficultyBadge.innerText = currentMode.name;
-  
-  // Actualizar velocidad
   PIPE_SPEED = BASE_PIPE_SPEED * currentMode.speedMult;
   
   return currentMode;
+}
+
+// 🎨 OBTENER COLOR DE TUBERÍAS SEGÚN PUNTUACIÓN
+function getPipeColor() {
+  for (let i = pipeColors.length - 1; i >= 0; i--) {
+    if (score >= pipeColors[i].minScore) {
+      return pipeColors[i];
+    }
+  }
+  return pipeColors[0];
+}
+
+// 🌙 OBTENER MODO DE FONDO SEGÚN PUNTUACIÓN
+function getBackgroundMode() {
+  for (let i = backgroundModes.length - 1; i >= 0; i--) {
+    if (score >= backgroundModes[i].minScore) {
+      return backgroundModes[i];
+    }
+  }
+  return backgroundModes[0];
+}
+
+// 💖 CREAR CORAZÓN FLOTANTE
+function spawnHeart() {
+  if (heartPowerUp) return; // Solo un corazón a la vez
+  
+  const heart = document.createElement('div');
+  heart.className = 'heart-powerup';
+  heart.innerHTML = '💖';
+  
+  // Posición aleatoria en el canvas
+  const heartX = Math.random() * (canvas.width - HEART_SIZE - 40) + 20;
+  const heartY = Math.random() * (canvas.height - 200) + 100;
+  
+  heart.style.left = (canvas.offsetLeft + heartX) + 'px';
+  heart.style.top = (canvas.offsetTop + heartY) + 'px';
+  document.body.appendChild(heart);
+  
+  heartPowerUp = {
+    element: heart,
+    x: heartX,
+    y: heartY,
+    spawnTime: Date.now(),
+    direction: Math.random() > 0.5 ? 1 : -1
+  };
+  
+  // Eliminar después del tiempo de vida
+  setTimeout(() => {
+    if (heartPowerUp && heartPowerUp.element) {
+      heartPowerUp.element.remove();
+      heartPowerUp = null;
+    }
+  }, HEART_LIFETIME);
+}
+
+// 💖 ACTUALIZAR POSICIÓN DEL CORAZÓN
+function updateHeart() {
+  if (!heartPowerUp) return;
+  
+  // Mover horizontalmente
+  heartPowerUp.x += HEART_SPEED * heartPowerUp.direction;
+  
+  // Rebotar en los bordes
+  if (heartPowerUp.x <= 0 || heartPowerUp.x >= canvas.width - HEART_SIZE) {
+    heartPowerUp.direction *= -1;
+  }
+  
+  heartPowerUp.element.style.left = (canvas.offsetLeft + heartPowerUp.x) + 'px';
+}
+
+// 💖 VERIFICAR COLISIÓN CON CORAZÓN
+function checkHeartCollision() {
+  if (!heartPowerUp) return false;
+  
+  const birdRight = BIRD_X + BIRD_SIZE - 20;
+  const birdLeft = BIRD_X + 20;
+  const birdTop = birdY + 20;
+  const birdBottom = birdY + BIRD_SIZE - 20;
+  
+  const heartRight = heartPowerUp.x + HEART_SIZE - 10;
+  const heartLeft = heartPowerUp.x + 10;
+  const heartTop = heartPowerUp.y + 10;
+  const heartBottom = heartPowerUp.y + HEART_SIZE - 10;
+  
+  if (birdRight > heartLeft && birdLeft < heartRight && birdTop < heartBottom && birdBottom > heartTop) {
+    return true;
+  }
+  return false;
+}
+
+// 💖 RECOGER CORAZÓN
+function collectHeart() {
+  if (!heartPowerUp) return;
+  
+  if (lives < MAX_LIVES) {
+    lives++;
+    updateLivesDisplay();
+    playSound('heart');
+    createParticles(heartPowerUp.x + HEART_SIZE/2, heartPowerUp.y + HEART_SIZE/2, '#ff6b6b');
+    
+    encouragementMessage.innerText = '💖 ¡VIDA EXTRA! 💖';
+    encouragementMessage.classList.remove('show');
+    void encouragementMessage.offsetWidth;
+    encouragementMessage.classList.add('show');
+    
+    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  }
+  
+  heartPowerUp.element.remove();
+  heartPowerUp = null;
 }
 
 function drawBird() {
@@ -674,10 +830,11 @@ function drawBird() {
   ctx.restore();
 }
 
-// 🌊 DIBUJAR TUBERÍAS CON MOVIMIENTO VERTICAL
+// 🌊🎨 DIBUJAR TUBERÍAS CON MOVIMIENTO Y COLOR DINÁMICO
 function drawPipes() {
+  const pipeColor = getPipeColor();
+  
   pipes.forEach(pipe => {
-    // Calcular offset vertical si score >= 200
     let verticalOffset = 0;
     if (score >= 200) {
       verticalOffset = Math.sin(pipe.spawnTime * PIPE_VERTICAL_SPEED) * PIPE_VERTICAL_AMPLITUDE;
@@ -686,45 +843,110 @@ function drawPipes() {
     const topHeight = pipe.topHeight + verticalOffset;
     const bottomY = topHeight + PIPE_GAP;
     
-    ctx.fillStyle = '#73BF2E';
+    ctx.fillStyle = pipeColor.main;
     ctx.fillRect(pipe.x, 0, PIPE_WIDTH, topHeight);
-    ctx.strokeStyle = '#2D5A1E';
+    ctx.strokeStyle = pipeColor.border;
     ctx.lineWidth = 4;
     ctx.strokeRect(pipe.x, 0, PIPE_WIDTH, topHeight);
     ctx.fillRect(pipe.x - 5, topHeight - 30, PIPE_WIDTH + 10, 30);
     ctx.strokeRect(pipe.x - 5, topHeight - 30, PIPE_WIDTH + 10, 30);
-    
     ctx.fillRect(pipe.x, bottomY, PIPE_WIDTH, canvas.height - bottomY);
     ctx.strokeRect(pipe.x, bottomY, PIPE_WIDTH, canvas.height - bottomY);
     ctx.fillRect(pipe.x - 5, bottomY, PIPE_WIDTH + 10, 30);
     ctx.strokeRect(pipe.x - 5, bottomY, PIPE_WIDTH + 10, 30);
     
-    // Guardar el offset actual para colisiones
     pipe.currentVerticalOffset = verticalOffset;
   });
 }
 
-function drawBackground() {
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, '#70C5CE');
-  gradient.addColorStop(1, '#B8E8EE');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+// 🌙 DIBUJAR LUNA
+function drawMoon() {
+  const bgMode = getBackgroundMode();
+  if (!bgMode.moon) return;
+  
+  const moonX = canvas.width - 60;
+  const moonY = 60;
+  const moonRadius = 35;
+  
+  const glowGradient = ctx.createRadialGradient(moonX, moonY, moonRadius * 0.5, moonX, moonY, moonRadius * 2);
+  glowGradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+  glowGradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+  ctx.fillStyle = glowGradient;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonRadius * 2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.fillStyle = '#FFFACD';
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.fillStyle = 'rgba(200, 200, 200, 0.5)';
+  ctx.beginPath();
+  ctx.arc(moonX - 10, moonY - 8, 6, 0, Math.PI * 2);
+  ctx.arc(moonX + 12, moonY + 5, 8, 0, Math.PI * 2);
+  ctx.arc(moonX - 5, moonY + 12, 5, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+  ctx.beginPath();
+  ctx.arc(moonX + 5, moonY + 5, moonRadius * 0.7, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ☁️ DIBUJAR NUBES
+function drawClouds() {
+  const bgMode = getBackgroundMode();
+  if (!bgMode.clouds) return;
+  
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+  
   ctx.beginPath();
   ctx.arc(100, 100, 30, 0, Math.PI * 2);
   ctx.arc(140, 100, 40, 0, Math.PI * 2);
   ctx.arc(180, 100, 30, 0, Math.PI * 2);
   ctx.fill();
+  
   ctx.beginPath();
   ctx.arc(300, 150, 25, 0, Math.PI * 2);
   ctx.arc(330, 150, 35, 0, Math.PI * 2);
   ctx.arc(360, 150, 25, 0, Math.PI * 2);
   ctx.fill();
+}
+
+// 🌅 DIBUJAR FONDO DINÁMICO
+function drawBackground() {
+  const bgMode = getBackgroundMode();
+  
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, bgMode.top);
+  gradient.addColorStop(1, bgMode.bottom);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  if (bgMode.clouds) {
+    drawClouds();
+  }
+  if (bgMode.moon) {
+    drawMoon();
+  }
+  
   ctx.fillStyle = '#DED895';
   ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
   ctx.fillStyle = '#73BF2E';
   ctx.fillRect(0, canvas.height - 50, canvas.width, 10);
+  
+  if (score >= 550) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    for (let i = 0; i < 30; i++) {
+      const starX = (i * 37) % canvas.width;
+      const starY = (i * 23) % (canvas.height - 100);
+      const starSize = (i % 3) + 1;
+      ctx.beginPath();
+      ctx.arc(starX, starY, starSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
 function updateBird() {
@@ -744,7 +966,7 @@ function updatePipes() {
       x: canvas.width, 
       topHeight: topHeight, 
       passed: false,
-      spawnTime: Date.now() // Para calcular el movimiento vertical
+      spawnTime: Date.now()
     });
     pipeTimer = 0;
   }
@@ -757,8 +979,12 @@ function updatePipes() {
       playSound('score');
       createParticles(BIRD_X + BIRD_SIZE/2, birdY + BIRD_SIZE/2, '#FFD700');
       
-      // Verificar cambio de modo de dificultad
       const newMode = updateDifficultyMode();
+      
+      // 💖 SPAWN CORAZÓN CADA 90 PUNTOS
+      if (score > 0 && score % HEART_SPAWN_INTERVAL === 0) {
+        spawnHeart();
+      }
       
       // Mostrar mensaje si cambió el modo (cada 50 puntos)
       if (score > 0 && score % 50 === 0) {
@@ -768,6 +994,16 @@ function updatePipes() {
         encouragementMessage.classList.add('show');
         playSound('levelup');
         createParticles(canvas.width/2, canvas.height/2, '#ff6b6b');
+        
+        const bgMode = getBackgroundMode();
+        if (score >= 400 && score % 50 === 0 && bgMode.moon) {
+          setTimeout(() => {
+            encouragementMessage.innerText = '🌙 ¡' + bgMode.name + '! 🌙';
+            encouragementMessage.classList.remove('show');
+            void encouragementMessage.offsetWidth;
+            encouragementMessage.classList.add('show');
+          }, 500);
+        }
       } else if (score % 10 === 0 && milestoneMessages[score]) {
         showEncouragement(true, score);
       } else if (score % 5 === 0 && score % 10 !== 0) {
@@ -779,7 +1015,6 @@ function updatePipes() {
   pipes = pipes.filter(pipe => pipe.x + PIPE_WIDTH > 0);
 }
 
-// 🌊 COLISIÓN CON TUBERÍAS EN MOVIMIENTO
 function birdCollision(pipe) {
   const tolerance = 15;
   const birdRight = BIRD_X + BIRD_SIZE - tolerance;
@@ -789,7 +1024,6 @@ function birdCollision(pipe) {
   const pipeRight = pipe.x + PIPE_WIDTH;
   const pipeLeft = pipe.x;
   
-  // Calcular offset vertical actual de la tubería
   let verticalOffset = 0;
   if (score >= 200) {
     verticalOffset = Math.sin(pipe.spawnTime * PIPE_VERTICAL_SPEED) * PIPE_VERTICAL_AMPLITUDE;
@@ -850,8 +1084,15 @@ function gameLoop() {
   drawBackground();
   updateBird();
   updatePipes();
+  updateHeart(); // 💖 Actualizar corazón
   drawPipes();
   drawBird();
+  
+  // 💖 Verificar colisión con corazón
+  if (checkHeartCollision()) {
+    collectHeart();
+  }
+  
   requestAnimationFrame(gameLoop);
 }
 
@@ -868,6 +1109,13 @@ function startGame() {
   scoreDisplay.innerText = score;
   updateLivesDisplay();
   updateDifficultyMode();
+  
+  // 💖 Limpiar corazón existente
+  if (heartPowerUp) {
+    heartPowerUp.element.remove();
+    heartPowerUp = null;
+  }
+  
   gameLoop();
 }
 
@@ -885,6 +1133,12 @@ function gameOver() {
   gameOverScreen.classList.remove('hidden');
   saveScore(score);
   if (tg?.HapticFeedback) { tg.HapticFeedback.notificationOccurred('error'); }
+  
+  // 💖 Limpiar corazón al terminar
+  if (heartPowerUp) {
+    heartPowerUp.element.remove();
+    heartPowerUp = null;
+  }
 }
 
 function jump() {
