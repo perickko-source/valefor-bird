@@ -484,6 +484,10 @@ const BASE_PIPE_SPEED = 2;
 let pipeTimer = 0;
 const PIPE_SPAWN_INTERVAL = 150;
 
+// 🌊 MOVIMIENTO VERTICAL DE TUBERÍAS
+const PIPE_VERTICAL_AMPLITUDE = 50; // Pixeles que se mueven arriba/abajo
+const PIPE_VERTICAL_SPEED = 0.03; // Velocidad del movimiento oscilatorio
+
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 const scoreDisplay = document.getElementById('score-display');
@@ -670,20 +674,33 @@ function drawBird() {
   ctx.restore();
 }
 
+// 🌊 DIBUJAR TUBERÍAS CON MOVIMIENTO VERTICAL
 function drawPipes() {
   pipes.forEach(pipe => {
+    // Calcular offset vertical si score >= 200
+    let verticalOffset = 0;
+    if (score >= 200) {
+      verticalOffset = Math.sin(pipe.spawnTime * PIPE_VERTICAL_SPEED) * PIPE_VERTICAL_AMPLITUDE;
+    }
+    
+    const topHeight = pipe.topHeight + verticalOffset;
+    const bottomY = topHeight + PIPE_GAP;
+    
     ctx.fillStyle = '#73BF2E';
-    ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
+    ctx.fillRect(pipe.x, 0, PIPE_WIDTH, topHeight);
     ctx.strokeStyle = '#2D5A1E';
     ctx.lineWidth = 4;
-    ctx.strokeRect(pipe.x, 0, PIPE_WIDTH, pipe.topHeight);
-    ctx.fillRect(pipe.x - 5, pipe.topHeight - 30, PIPE_WIDTH + 10, 30);
-    ctx.strokeRect(pipe.x - 5, pipe.topHeight - 30, PIPE_WIDTH + 10, 30);
-    const bottomY = pipe.topHeight + PIPE_GAP;
+    ctx.strokeRect(pipe.x, 0, PIPE_WIDTH, topHeight);
+    ctx.fillRect(pipe.x - 5, topHeight - 30, PIPE_WIDTH + 10, 30);
+    ctx.strokeRect(pipe.x - 5, topHeight - 30, PIPE_WIDTH + 10, 30);
+    
     ctx.fillRect(pipe.x, bottomY, PIPE_WIDTH, canvas.height - bottomY);
     ctx.strokeRect(pipe.x, bottomY, PIPE_WIDTH, canvas.height - bottomY);
     ctx.fillRect(pipe.x - 5, bottomY, PIPE_WIDTH + 10, 30);
     ctx.strokeRect(pipe.x - 5, bottomY, PIPE_WIDTH + 10, 30);
+    
+    // Guardar el offset actual para colisiones
+    pipe.currentVerticalOffset = verticalOffset;
   });
 }
 
@@ -723,7 +740,12 @@ function updatePipes() {
     const minPipeHeight = 80;
     const maxPipeHeight = canvas.height - PIPE_GAP - minPipeHeight - 50;
     const topHeight = Math.random() * (maxPipeHeight - minPipeHeight) + minPipeHeight;
-    pipes.push({ x: canvas.width, topHeight: topHeight, passed: false });
+    pipes.push({ 
+      x: canvas.width, 
+      topHeight: topHeight, 
+      passed: false,
+      spawnTime: Date.now() // Para calcular el movimiento vertical
+    });
     pipeTimer = 0;
   }
   pipes.forEach(pipe => {
@@ -757,6 +779,7 @@ function updatePipes() {
   pipes = pipes.filter(pipe => pipe.x + PIPE_WIDTH > 0);
 }
 
+// 🌊 COLISIÓN CON TUBERÍAS EN MOVIMIENTO
 function birdCollision(pipe) {
   const tolerance = 15;
   const birdRight = BIRD_X + BIRD_SIZE - tolerance;
@@ -765,8 +788,18 @@ function birdCollision(pipe) {
   const birdBottom = birdY + BIRD_SIZE - tolerance;
   const pipeRight = pipe.x + PIPE_WIDTH;
   const pipeLeft = pipe.x;
-  if (birdRight > pipeLeft && birdLeft < pipeRight && birdTop < pipe.topHeight) { return true; }
-  if (birdRight > pipeLeft && birdLeft < pipeRight && birdBottom > pipe.topHeight + PIPE_GAP) { return true; }
+  
+  // Calcular offset vertical actual de la tubería
+  let verticalOffset = 0;
+  if (score >= 200) {
+    verticalOffset = Math.sin(pipe.spawnTime * PIPE_VERTICAL_SPEED) * PIPE_VERTICAL_AMPLITUDE;
+  }
+  
+  const topHeight = pipe.topHeight + verticalOffset;
+  const bottomY = topHeight + PIPE_GAP;
+  
+  if (birdRight > pipeLeft && birdLeft < pipeRight && birdTop < topHeight) { return true; }
+  if (birdRight > pipeLeft && birdLeft < pipeRight && birdBottom > bottomY) { return true; }
   return false;
 }
 
